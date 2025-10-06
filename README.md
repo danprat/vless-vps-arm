@@ -12,18 +12,195 @@ This project adapts the original Cloudflare Worker script into a standalone Node
 ## Prerequisites
 - Docker 24+
 - A VPS (ARM64 or x86_64)
+- Portainer (recommended for easy deployment)
 
-## Quick start
+## Installation Methods
+
+### Method 1: Portainer Deployment (Recommended)
+
+#### Step 1: Install Portainer on your VPS
+
+For **AMD64** systems:
 ```bash
+docker volume create portainer_data
+docker run -d -p 8000:8000 -p 9443:9443 --name portainer --restart=always -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/data portainer/portainer-ce:latest
+```
+
+For **ARM64** systems (like Raspberry Pi or ARM VPS):
+```bash
+docker volume create portainer_data
+docker run -d -p 8000:8000 -p 9443:9443 --name portainer --restart=always -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/data portainer/portainer-ce:latest --platform linux/arm64
+```
+
+#### Step 2: Access Portainer Web Interface
+1. Open your browser and go to `https://your-vps-ip:9443`
+2. Create an admin user account on first visit
+3. Select "Docker" as your environment
+
+#### Step 3: Deploy VLESS Gateway via Portainer
+
+1. In Portainer, go to **Stacks** → **Add Stack**
+2. Name your stack: `vless-gateway`
+3. Choose **Web editor** and paste this Docker Compose configuration:
+
+```yaml
+version: '3.8'
+
+services:
+  vless-gateway:
+    image: node:20-alpine
+    container_name: vless-gateway
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    environment:
+      - PORT=8787
+      - APP_DOMAIN=your-domain.com  # Replace with your domain
+      - ROOT_DOMAIN=
+      - SERVICE_NAME=
+      - PROXY_BANK_URL=https://raw.githubusercontent.com/FoolVPN-ID/Nautica/refs/heads/main/proxyList.txt
+      - KV_PROXY_URL=https://raw.githubusercontent.com/FoolVPN-ID/Nautica/refs/heads/main/kvProxyList.json
+      - PORT_OPTIONS=443,80
+      - PROTOCOL_OPTIONS=trojan,vless,ss
+      - DNS_SERVER_ADDRESS=94.140.14.14
+      - DNS_SERVER_PORT=53
+      - PROXY_HEALTH_CHECK_API=https://id1.foolvpn.me/api/v1/check
+      - CONVERTER_URL=https://api.foolvpn.me/convert
+      - REVERSE_PROXY_TARGET=
+      - DONATE_LINK=https://trakteer.id/dickymuliafiqri/tip
+      - PROXY_PER_PAGE=24
+    working_dir: /app
+    volumes:
+      - ./:/app
+    command: sh -c "npm install && node src/server.js"
+    networks:
+      - vless-network
+
+networks:
+  vless-network:
+    driver: bridge
+```
+
+**Alternative method using pre-built image:**
+
+If you want to use the repository directly from GitHub:
+
+```yaml
+version: '3.8'
+
+services:
+  vless-gateway:
+    build:
+      context: https://github.com/danprat/vless-vps-arm.git
+      dockerfile: Dockerfile
+    container_name: vless-gateway
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    environment:
+      - PORT=8787
+      - APP_DOMAIN=your-domain.com  # Replace with your domain
+      # Add other environment variables as needed
+    networks:
+      - vless-network
+
+networks:
+  vless-network:
+    driver: bridge
+```
+
+4. **Important**: Replace `your-domain.com` with your actual domain or VPS IP
+5. Click **Deploy the stack**
+6. Wait for the deployment to complete
+
+#### Step 4: Verify Installation
+1. Go to **Containers** in Portainer
+2. Check that `vless-gateway` container is running (green status)
+3. Click on the container name to view logs and ensure no errors
+4. Test access: `http://your-vps-ip:8787/sub`
+
+#### Step 5: Configure Reverse Proxy (Optional but Recommended)
+
+For production use with SSL, add an Nginx reverse proxy:
+
+1. Create another stack called `nginx-proxy`:
+
+```yaml
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/ssl:ro  # Mount your SSL certificates here
+    networks:
+      - vless-network
+
+networks:
+  vless-network:
+    external: true
+```
+
+2. Create `nginx.conf` configuration file in your project directory.
+
+### Method 2: Quick Docker Command Line
+
+If you prefer command line deployment:
+
+```bash
+# Clone the repository
+git clone https://github.com/danprat/vless-vps-arm.git
+cd vless-vps-arm
+
+# Build the Docker image
 docker build -t vless-gateway .
+
+# Run the container
 docker run -d \
   --name vless-gateway \
+  --restart unless-stopped \
   -p 8787:8787 \
-  -e APP_DOMAIN=proxy.example.com \
+  -e APP_DOMAIN=your-domain.com \
+  -e PORT=8787 \
   vless-gateway
 ```
 
-The service listens on port `8787` by default. Adjust environment variables to match your desired hostnames and proxy sources.
+The service listens on port `8787` by default. Access the web interface at `http://your-vps-ip:8787/sub`.
+
+### Method 3: Docker Compose (Alternative)
+
+Create a `docker-compose.yml` file:
+
+```yaml
+version: '3.8'
+
+services:
+  vless-gateway:
+    build: .
+    container_name: vless-gateway
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    environment:
+      - PORT=8787
+      - APP_DOMAIN=your-domain.com
+      # Add other environment variables as needed
+
+networks:
+  default:
+    name: vless-network
+```
+
+Then run:
+```bash
+docker-compose up -d
+```
 
 ## Environment variables
 | Variable | Default | Description |
@@ -56,9 +233,68 @@ The service listens on port `8787` by default. Adjust environment variables to m
 - WebSocket handling is powered by the `ws` package
 - UDP forwarding uses the native `dgram` module
 
+## Troubleshooting
+
+### Portainer Issues
+
+**Cannot access Portainer web interface:**
+- Ensure ports 8000 and 9443 are open in your firewall
+- Check if Portainer container is running: `docker ps | grep portainer`
+- For ARM64 systems, ensure you're using the correct image
+
+**Container fails to start:**
+- Check container logs in Portainer: Go to Containers → Click container name → Logs
+- Verify all environment variables are set correctly
+- Ensure port 8787 is not already in use: `netstat -tlpn | grep 8787`
+
+**Build fails in Portainer:**
+- Make sure your VPS has sufficient disk space
+- Try pulling the base image manually: `docker pull node:20-alpine`
+- Check if the GitHub repository is accessible from your VPS
+
+**Cannot access the VLESS gateway:**
+- Verify the container is running in Portainer
+- Check firewall rules allow traffic on port 8787
+- Test locally first: `curl http://localhost:8787/sub`
+
+### General Issues
+
+**WebSocket connection failures:**
+- Ensure proper reverse proxy configuration if using SSL
+- Check that WebSocket upgrade headers are properly forwarded
+- Verify no firewall is blocking WebSocket connections
+
+**Performance issues:**
+- Monitor container resource usage in Portainer
+- Consider increasing container memory limits
+- Check proxy list sources are accessible
+
 ## Security considerations
 - The gateway forwards raw traffic to destinations requested by clients. Protect it behind authentication, firewall rules, or dedicated upstream lists as needed.
 - When exposing externally, place it behind TLS termination (e.g., Nginx/Traefik) to secure WebSocket upgrades.
+- Change default Portainer admin password immediately after installation
+- Consider using Docker secrets for sensitive environment variables in production
+
+## Production Deployment Tips
+
+### Using Traefik with Portainer
+For automatic SSL certificates and better routing:
+
+1. Deploy Traefik stack in Portainer
+2. Add labels to your VLESS gateway service:
+
+```yaml
+labels:
+  - "traefik.enable=true"
+  - "traefik.http.routers.vless.rule=Host(`your-domain.com`)"
+  - "traefik.http.routers.vless.entrypoints=websecure"
+  - "traefik.http.routers.vless.tls.certresolver=letsencrypt"
+```
+
+### Monitoring with Portainer
+- Use Portainer's container stats to monitor performance
+- Set up container health checks for automatic restarts
+- Enable logging drivers for centralized log management
 
 ## License
 MIT (aligns with upstream worker usage).
