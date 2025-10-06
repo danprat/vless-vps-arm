@@ -34,9 +34,9 @@ services:
     container_name: vless-gateway
     restart: unless-stopped
     ports:
-      - "8787:8787"
+      - "8790:8790"
     environment:
-      - PORT=8787
+      - PORT=8790
       - APP_DOMAIN=localhost
       - PROXY_BANK_URL=https://raw.githubusercontent.com/FoolVPN-ID/Nautica/refs/heads/main/proxyList.txt
       - KV_PROXY_URL=https://raw.githubusercontent.com/FoolVPN-ID/Nautica/refs/heads/main/kvProxyList.json
@@ -48,7 +48,7 @@ services:
       - CONVERTER_URL=https://api.foolvpn.me/convert
       - PROXY_PER_PAGE=24
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8787/api/v1/myip"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8790/api/v1/myip"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -63,9 +63,10 @@ networks:
     name: vless-network
 ```
 
-4. Ganti `APP_DOMAIN=localhost` dengan domain/IP VPS Anda
-5. Klik **Deploy the stack** 
-6. Akses: `http://your-vps-ip:8787/sub`
+4. **Opsional**: Ganti `APP_DOMAIN=localhost` dengan domain/IP VPS Anda
+5. **Opsional**: Ubah port jika ingin (default: 8790)
+6. Klik **Deploy the stack** 
+7. Akses: `http://your-vps-ip:8790/sub`
 
 **✅ Selesai! Tidak perlu download atau setup tambahan.**
 
@@ -112,9 +113,9 @@ services:
     container_name: vless-gateway
     restart: unless-stopped
     ports:
-      - "8787:8787"
+      - "8790:8790"
     environment:
-      - PORT=8787
+      - PORT=8790
       - APP_DOMAIN=${APP_DOMAIN:-localhost}
       - ROOT_DOMAIN=
       - SERVICE_NAME=
@@ -148,7 +149,7 @@ networks:
 1. Go to **Containers** in Portainer
 2. Check that `vless-gateway` container is running (green status)
 3. Click on the container name to view logs and ensure no errors
-4. Test access: `http://your-vps-ip:8787/sub`
+4. Test access: `http://your-vps-ip:8790/sub`
 
 #### Step 5: Configure Reverse Proxy (Optional but Recommended)
 
@@ -196,13 +197,13 @@ docker build -t vless-gateway .
 docker run -d \
   --name vless-gateway \
   --restart unless-stopped \
-  -p 8787:8787 \
+  -p 8790:8790 \
   -e APP_DOMAIN=your-domain.com \
-  -e PORT=8787 \
+  -e PORT=8790 \
   vless-gateway
 ```
 
-The service listens on port `8787` by default. Access the web interface at `http://your-vps-ip:8787/sub`.
+The service listens on port `8790` by default. Access the web interface at `http://your-vps-ip:8790/sub`.
 
 ### Method 3: Docker Compose (Alternative)
 
@@ -217,9 +218,9 @@ services:
     container_name: vless-gateway
     restart: unless-stopped
     ports:
-      - "8787:8787"
+      - "8790:8790"
     environment:
-      - PORT=8787
+      - PORT=8790
       - APP_DOMAIN=your-domain.com
       # Add other environment variables as needed
 
@@ -236,7 +237,7 @@ docker-compose up -d
 ## Environment variables
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PORT` | `8787` | Listener port |
+| `PORT` | `8790` | Listener port |
 | `APP_DOMAIN` | *(request Host header)* | Public domain used in generated configs (set when reverse proxying) |
 | `ROOT_DOMAIN` | *(unused when `APP_DOMAIN` set)* | Optional root domain used with `SERVICE_NAME` to build fallback domain |
 | `SERVICE_NAME` | *(unused when `APP_DOMAIN` set)* | Optional label used alongside `ROOT_DOMAIN` |
@@ -286,20 +287,20 @@ docker-compose up -d
 2. **Pastikan Port Binding Benar:**
    ```bash
    # Check if port is listening
-   netstat -tlpn | grep 8787
+   netstat -tlpn | grep 8790
    
    # Or dengan Docker
    docker port vless-gateway
    ```
    
-   Harus menunjukkan: `0.0.0.0:8787 -> 8787/tcp`
+   Harus menunjukkan: `0.0.0.0:8790 -> 8790/tcp`
 
 3. **Test WebSocket Connection:**
    ```bash
    # Test dengan curl
    curl -i -N -H "Connection: Upgrade" -H "Upgrade: websocket" \
         -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: test" \
-        http://localhost:8787/test-proxy
+        http://localhost:8790/test-proxy
    
    # Harus return 101 Switching Protocols
    ```
@@ -307,17 +308,17 @@ docker-compose up -d
 4. **Check Firewall Rules:**
    ```bash
    # UFW (Ubuntu)
-   sudo ufw allow 8787/tcp
+   sudo ufw allow 8790/tcp
    
    # Firewalld (CentOS/RHEL)
-   sudo firewall-cmd --permanent --add-port=8787/tcp
+   sudo firewall-cmd --permanent --add-port=8790/tcp
    sudo firewall-cmd --reload
    ```
 
 5. **Verify WebSocket URL Format:**
    Format yang benar untuk proxy:
-   - `ws://your-domain:8787/proxy-ip-port` (contoh: `/1.2.3.4-443`)
-   - `ws://your-domain:8787/ID,SG,US` (untuk KV proxy)
+   - `ws://your-domain:8790/proxy-ip-port` (contoh: `/1.2.3.4-443`)
+   - `ws://your-domain:8790/ID,SG,US` (untuk KV proxy)
 
 **WebSocket terhubung tapi tidak ada data:**
 
@@ -359,7 +360,7 @@ docker-compose up -d
 **Container fails to start:**
 - Check container logs in Portainer: Go to Containers → Click container name → Logs
 - Verify all environment variables are set correctly
-- Ensure port 8787 is not already in use: `netstat -tlpn | grep 8787`
+- Ensure port 8790 is not already in use: `netstat -tlpn | grep 8790`
 
 **Build fails in Portainer:**
 - Make sure your VPS has sufficient disk space
@@ -368,8 +369,8 @@ docker-compose up -d
 
 **Cannot access the VLESS gateway:**
 - Verify the container is running in Portainer
-- Check firewall rules allow traffic on port 8787
-- Test locally first: `curl http://localhost:8787/sub`
+- Check firewall rules allow traffic on port 8790
+- Test locally first: `curl http://localhost:8790/sub`
 
 ### General Issues
 

@@ -15,7 +15,7 @@ docker logs -f vless-gateway
 ### 2. Test Server Accessibility
 ```bash
 # Test HTTP endpoint
-curl http://localhost:8787/api/v1/myip
+curl http://localhost:8790/api/v1/myip
 
 # Should return your IP and request headers
 ```
@@ -28,7 +28,7 @@ curl -i -N \
   -H "Upgrade: websocket" \
   -H "Sec-WebSocket-Version: 13" \
   -H "Sec-WebSocket-Key: SGVsbG8sIHdvcmxkIQ==" \
-  http://localhost:8787/1.1.1.1-443
+  http://localhost:8790/1.1.1.1-443
 
 # Expected response: HTTP/1.1 101 Switching Protocols
 ```
@@ -36,11 +36,11 @@ curl -i -N \
 ### 4. Check Port Binding
 ```bash
 # Linux
-netstat -tlpn | grep 8787
-ss -tlpn | grep 8787
+netstat -tlpn | grep 8790
+ss -tlpn | grep 8790
 
 # macOS
-lsof -i :8787
+lsof -i :8790
 
 # Docker
 docker port vless-gateway
@@ -62,11 +62,11 @@ docker logs vless-gateway 2>&1 | grep WebSocket
 ```bash
 # Error: EADDRINUSE
 # Solution: Kill the process using the port
-sudo lsof -ti:8787 | xargs kill -9
+sudo lsof -ti:8790 | xargs kill -9
 
 # Or change port in docker-compose:
 ports:
-  - "8888:8787"  # Use different external port
+  - "8888:8790"  # Use different external port
 ```
 
 ### Issue 2: Container Starts but WebSocket Fails
@@ -74,14 +74,14 @@ ports:
 # Check if server is binding to correct interface
 docker exec vless-gateway netstat -tlpn
 
-# Should show: 0.0.0.0:8787 (not 127.0.0.1:8787)
+# Should show: 0.0.0.0:8790 (not 127.0.0.1:8790)
 ```
 
 ### Issue 3: Connection Refused from External IP
 ```bash
 # Check firewall
 sudo ufw status
-sudo ufw allow 8787/tcp
+sudo ufw allow 8790/tcp
 
 # Check Docker network
 docker network inspect vless-network
@@ -138,10 +138,10 @@ docker exec vless-gateway nc -zv proxy-ip proxy-port
 npm install -g wscat
 
 # Test connection
-wscat -c ws://localhost:8787/1.1.1.1-443
+wscat -c ws://localhost:8790/1.1.1.1-443
 
 # With protocol header
-wscat -c ws://localhost:8787/1.1.1.1-443 \
+wscat -c ws://localhost:8790/1.1.1.1-443 \
   --header "Sec-WebSocket-Protocol: base64-encoded-data"
 ```
 
@@ -152,7 +152,7 @@ brew install websocat  # macOS
 apt install websocat   # Ubuntu
 
 # Test
-websocat ws://localhost:8787/1.1.1.1-443
+websocat ws://localhost:8790/1.1.1.1-443
 ```
 
 ### Test with Python
@@ -160,7 +160,7 @@ websocat ws://localhost:8787/1.1.1.1-443
 import websocket
 
 ws = websocket.WebSocket()
-ws.connect("ws://localhost:8787/1.1.1.1-443")
+ws.connect("ws://localhost:8790/1.1.1.1-443")
 print("Connected!")
 ws.close()
 ```
@@ -173,7 +173,7 @@ ws.close()
 apt install apache2-utils
 
 # Test concurrent connections (adjust for WebSocket load testing)
-ab -n 1000 -c 10 http://localhost:8787/sub
+ab -n 1000 -c 10 http://localhost:8790/sub
 ```
 
 ### Monitor Container Resources
@@ -246,12 +246,12 @@ Expected output:
 ## Quick Fix Checklist
 
 - [ ] Container is running (`docker ps`)
-- [ ] Port 8787 is accessible (`netstat -tlpn`)
+- [ ] Port 8790 is accessible (`netstat -tlpn`)
 - [ ] Server binds to 0.0.0.0 (not 127.0.0.1)
-- [ ] Firewall allows port 8787
-- [ ] Logs show "Server listening on 0.0.0.0:8787"
+- [ ] Firewall allows port 8790
+- [ ] Logs show "Server listening on 0.0.0.0:8790"
 - [ ] Health check returns "healthy"
-- [ ] Can access http://localhost:8787/sub
+- [ ] Can access http://localhost:8790/sub
 - [ ] WebSocket upgrade returns 101 status
 - [ ] No error messages in logs
 

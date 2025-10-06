@@ -47,7 +47,7 @@ const protocolOptions = (process.env.PROTOCOL_OPTIONS || 'trojan,vless,ss')
   .map((value) => value.trim())
   .filter(Boolean);
 const reverseProxyTarget = process.env.REVERSE_PROXY_TARGET || '';
-const listenPort = Number(process.env.PORT || 8787);
+const listenPort = Number(process.env.PORT || 8790);
 
 function extractHost(headerValue) {
   return (headerValue || '').split(':')[0] || 'localhost';
