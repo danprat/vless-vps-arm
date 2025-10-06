@@ -17,7 +17,7 @@ services:
       - "8790:8790"
     environment:
       - PORT=8790
-      - APP_DOMAIN=localhost  # GANTI DENGAN DOMAIN/IP ANDA
+      - APP_DOMAIN=support.zoom.us.dany.qzz.io  # GANTI DENGAN DOMAIN ANDA
       - PROXY_BANK_URL=https://raw.githubusercontent.com/FoolVPN-ID/Nautica/refs/heads/main/proxyList.txt
       - KV_PROXY_URL=https://raw.githubusercontent.com/FoolVPN-ID/Nautica/refs/heads/main/kvProxyList.json
       - PORT_OPTIONS=443,80
@@ -106,11 +106,13 @@ sudo iptables-save
 
 | Endpoint | URL | Description |
 |----------|-----|-------------|
-| Web UI | `http://your-vps-ip:8790/sub` | Main proxy list page |
-| API IP | `http://your-vps-ip:8790/api/v1/myip` | Check your IP |
-| Subscription | `http://your-vps-ip:8790/api/v1/sub?format=raw` | Get proxy list |
-| Health Check | `http://your-vps-ip:8790/check?target=1.1.1.1:443` | Check proxy health |
-| WebSocket | `ws://your-vps-ip:8790/<proxy-ip>-<port>` | Direct proxy tunnel |
+| Web UI (Domain) | `http://support.zoom.us.dany.qzz.io:8790/sub` | Main proxy list page |
+| Web UI (IP) | `http://your-vps-ip:8790/sub` | Main proxy list page |
+| API IP | `http://support.zoom.us.dany.qzz.io:8790/api/v1/myip` | Check your IP |
+| Subscription | `http://support.zoom.us.dany.qzz.io:8790/api/v1/sub?format=raw` | Get proxy list |
+| Health Check | `http://support.zoom.us.dany.qzz.io:8790/check?target=1.1.1.1:443` | Check proxy health |
+| WebSocket (Domain) | `ws://support.zoom.us.dany.qzz.io:8790/<proxy-ip>-<port>` | Direct proxy tunnel |
+| WebSocket (IP) | `ws://your-vps-ip:8790/<proxy-ip>-<port>` | Direct proxy tunnel |
 
 ## 🔍 Troubleshooting
 
@@ -203,12 +205,24 @@ docker rm vless-gateway
 
 ## 🌐 Reverse Proxy with Nginx
 
-If you want to use domain with SSL:
+If you want to use domain with SSL (HTTPS):
 
 ```nginx
 server {
     listen 80;
-    server_name your-domain.com;
+    server_name support.zoom.us.dany.qzz.io;
+    
+    # Redirect HTTP to HTTPS
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name support.zoom.us.dany.qzz.io;
+    
+    # SSL Configuration (use certbot or your SSL certificates)
+    ssl_certificate /etc/letsencrypt/live/support.zoom.us.dany.qzz.io/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/support.zoom.us.dany.qzz.io/privkey.pem;
     
     location / {
         proxy_pass http://localhost:8790;
@@ -221,6 +235,18 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
+```
+
+**Setup SSL dengan Certbot:**
+```bash
+# Install certbot
+sudo apt install certbot python3-certbot-nginx
+
+# Get SSL certificate
+sudo certbot --nginx -d support.zoom.us.dany.qzz.io
+
+# Auto-renewal
+sudo certbot renew --dry-run
 ```
 
 ## 💡 Tips
@@ -238,7 +264,7 @@ You can customize behavior by changing these in Portainer:
 ```yaml
 environment:
   - PORT=8790                    # Change port (must match ports mapping)
-  - APP_DOMAIN=your-domain.com   # Your domain/IP
+  - APP_DOMAIN=support.zoom.us.dany.qzz.io   # Your domain/IP
   - PROXY_PER_PAGE=24           # Proxies per page
   - PORT_OPTIONS=443,80         # Ports to include in configs
   - PROTOCOL_OPTIONS=trojan,vless,ss  # Protocols to support

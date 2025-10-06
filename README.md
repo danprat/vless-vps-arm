@@ -37,7 +37,7 @@ services:
       - "8790:8790"
     environment:
       - PORT=8790
-      - APP_DOMAIN=localhost
+      - APP_DOMAIN=support.zoom.us.dany.qzz.io
       - PROXY_BANK_URL=https://raw.githubusercontent.com/FoolVPN-ID/Nautica/refs/heads/main/proxyList.txt
       - KV_PROXY_URL=https://raw.githubusercontent.com/FoolVPN-ID/Nautica/refs/heads/main/kvProxyList.json
       - PORT_OPTIONS=443,80
@@ -63,10 +63,10 @@ networks:
     name: vless-network
 ```
 
-4. **Opsional**: Ganti `APP_DOMAIN=localhost` dengan domain/IP VPS Anda
+4. **Opsional**: Ganti `APP_DOMAIN` jika menggunakan domain berbeda
 5. **Opsional**: Ubah port jika ingin (default: 8790)
 6. Klik **Deploy the stack** 
-7. Akses: `http://your-vps-ip:8790/sub`
+7. Akses: `http://support.zoom.us.dany.qzz.io:8790/sub` atau `http://your-vps-ip:8790/sub`
 
 **✅ Selesai! Tidak perlu download atau setup tambahan.**
 
@@ -139,17 +139,21 @@ networks:
 ```
 
 4. **Optional**: In **Environment variables** section di Portainer, tambahkan:
-   - `APP_DOMAIN` = `your-domain.com` (atau IP VPS Anda)
+   - `APP_DOMAIN` = `support.zoom.us.dany.qzz.io` (atau domain Anda)
 5. Click **Deploy the stack**
 6. Tunggu hingga build selesai (sekitar 2-3 menit)
 
 > **💡 Tips**: Konfigurasi ini langsung menggunakan repository GitHub, jadi tidak perlu download atau clone manual!
+> 
+> **🌐 Domain Setup**: Pastikan domain `support.zoom.us.dany.qzz.io` sudah di-pointing ke IP VPS Anda
 
 #### Step 4: Verify Installation
 1. Go to **Containers** in Portainer
 2. Check that `vless-gateway` container is running (green status)
 3. Click on the container name to view logs and ensure no errors
-4. Test access: `http://your-vps-ip:8790/sub`
+4. Test access: 
+   - `http://support.zoom.us.dany.qzz.io:8790/sub` (dengan domain)
+   - `http://your-vps-ip:8790/sub` (dengan IP)
 
 #### Step 5: Configure Reverse Proxy (Optional but Recommended)
 
@@ -198,12 +202,14 @@ docker run -d \
   --name vless-gateway \
   --restart unless-stopped \
   -p 8790:8790 \
-  -e APP_DOMAIN=your-domain.com \
+  -e APP_DOMAIN=support.zoom.us.dany.qzz.io \
   -e PORT=8790 \
   vless-gateway
 ```
 
-The service listens on port `8790` by default. Access the web interface at `http://your-vps-ip:8790/sub`.
+The service listens on port `8790` by default. Access the web interface at:
+- With domain: `http://support.zoom.us.dany.qzz.io:8790/sub`
+- With IP: `http://your-vps-ip:8790/sub`
 
 ### Method 3: Docker Compose (Alternative)
 
@@ -221,7 +227,7 @@ services:
       - "8790:8790"
     environment:
       - PORT=8790
-      - APP_DOMAIN=your-domain.com
+      - APP_DOMAIN=support.zoom.us.dany.qzz.io
       # Add other environment variables as needed
 
 networks:
@@ -317,8 +323,9 @@ docker-compose up -d
 
 5. **Verify WebSocket URL Format:**
    Format yang benar untuk proxy:
-   - `ws://your-domain:8790/proxy-ip-port` (contoh: `/1.2.3.4-443`)
-   - `ws://your-domain:8790/ID,SG,US` (untuk KV proxy)
+   - `ws://support.zoom.us.dany.qzz.io:8790/proxy-ip-port` (contoh: `/1.2.3.4-443`)
+   - `ws://support.zoom.us.dany.qzz.io:8790/ID,SG,US` (untuk KV proxy)
+   - Atau gunakan IP langsung: `ws://your-vps-ip:8790/proxy-ip-port`
 
 **WebSocket terhubung tapi tidak ada data:**
 
