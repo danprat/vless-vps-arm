@@ -16,7 +16,49 @@ This project adapts the original Cloudflare Worker script into a standalone Node
 
 ## Installation Methods
 
-### Method 1: Portainer Deployment (Recommended)
+### Method 1: Portainer One-Click Deployment (Recommended)
+
+**🚀 Copy & Paste Ready - Langsung Deploy!**
+
+1. Buka Portainer → **Stacks** → **Add Stack**
+2. Stack name: `vless-gateway`  
+3. Copy-paste konfigurasi ini:
+
+```yaml
+version: '3.8'
+services:
+  vless-gateway:
+    build:
+      context: https://github.com/danprat/vless-vps-arm.git
+      dockerfile: Dockerfile
+    container_name: vless-gateway
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    environment:
+      - PORT=8787
+      - APP_DOMAIN=localhost
+      - PROXY_BANK_URL=https://raw.githubusercontent.com/FoolVPN-ID/Nautica/refs/heads/main/proxyList.txt
+      - KV_PROXY_URL=https://raw.githubusercontent.com/FoolVPN-ID/Nautica/refs/heads/main/kvProxyList.json
+      - PORT_OPTIONS=443,80
+      - PROTOCOL_OPTIONS=trojan,vless,ss
+      - DNS_SERVER_ADDRESS=94.140.14.14
+      - DNS_SERVER_PORT=53
+      - PROXY_HEALTH_CHECK_API=https://id1.foolvpn.me/api/v1/check
+      - CONVERTER_URL=https://api.foolvpn.me/convert
+      - PROXY_PER_PAGE=24
+networks:
+  default:
+    name: vless-network
+```
+
+4. Ganti `APP_DOMAIN=localhost` dengan domain/IP VPS Anda
+5. Klik **Deploy the stack** 
+6. Akses: `http://your-vps-ip:8787/sub`
+
+**✅ Selesai! Tidak perlu download atau setup tambahan.**
+
+### Method 2: Detailed Portainer Setup (Advanced)
 
 #### Step 1: Install Portainer on your VPS
 
@@ -37,53 +79,11 @@ docker run -d -p 8000:8000 -p 9443:9443 --name portainer --restart=always -v /va
 2. Create an admin user account on first visit
 3. Select "Docker" as your environment
 
-#### Step 3: Deploy VLESS Gateway via Portainer
+#### Step 3: Deploy VLESS Gateway via Portainer (One-Click Setup)
 
 1. In Portainer, go to **Stacks** → **Add Stack**
 2. Name your stack: `vless-gateway`
-3. Choose **Web editor** and paste this Docker Compose configuration:
-
-```yaml
-version: '3.8'
-
-services:
-  vless-gateway:
-    image: node:20-alpine
-    container_name: vless-gateway
-    restart: unless-stopped
-    ports:
-      - "8787:8787"
-    environment:
-      - PORT=8787
-      - APP_DOMAIN=your-domain.com  # Replace with your domain
-      - ROOT_DOMAIN=
-      - SERVICE_NAME=
-      - PROXY_BANK_URL=https://raw.githubusercontent.com/FoolVPN-ID/Nautica/refs/heads/main/proxyList.txt
-      - KV_PROXY_URL=https://raw.githubusercontent.com/FoolVPN-ID/Nautica/refs/heads/main/kvProxyList.json
-      - PORT_OPTIONS=443,80
-      - PROTOCOL_OPTIONS=trojan,vless,ss
-      - DNS_SERVER_ADDRESS=94.140.14.14
-      - DNS_SERVER_PORT=53
-      - PROXY_HEALTH_CHECK_API=https://id1.foolvpn.me/api/v1/check
-      - CONVERTER_URL=https://api.foolvpn.me/convert
-      - REVERSE_PROXY_TARGET=
-      - DONATE_LINK=https://trakteer.id/dickymuliafiqri/tip
-      - PROXY_PER_PAGE=24
-    working_dir: /app
-    volumes:
-      - ./:/app
-    command: sh -c "npm install && node src/server.js"
-    networks:
-      - vless-network
-
-networks:
-  vless-network:
-    driver: bridge
-```
-
-**Alternative method using pre-built image:**
-
-If you want to use the repository directly from GitHub:
+3. Choose **Web editor** and paste this **complete configuration** (ready to use):
 
 ```yaml
 version: '3.8'
@@ -99,8 +99,20 @@ services:
       - "8787:8787"
     environment:
       - PORT=8787
-      - APP_DOMAIN=your-domain.com  # Replace with your domain
-      # Add other environment variables as needed
+      - APP_DOMAIN=${APP_DOMAIN:-localhost}
+      - ROOT_DOMAIN=
+      - SERVICE_NAME=
+      - PROXY_BANK_URL=https://raw.githubusercontent.com/FoolVPN-ID/Nautica/refs/heads/main/proxyList.txt
+      - KV_PROXY_URL=https://raw.githubusercontent.com/FoolVPN-ID/Nautica/refs/heads/main/kvProxyList.json
+      - PORT_OPTIONS=443,80
+      - PROTOCOL_OPTIONS=trojan,vless,ss
+      - DNS_SERVER_ADDRESS=94.140.14.14
+      - DNS_SERVER_PORT=53
+      - PROXY_HEALTH_CHECK_API=https://id1.foolvpn.me/api/v1/check
+      - CONVERTER_URL=https://api.foolvpn.me/convert
+      - REVERSE_PROXY_TARGET=
+      - DONATE_LINK=https://trakteer.id/dickymuliafiqri/tip
+      - PROXY_PER_PAGE=24
     networks:
       - vless-network
 
@@ -109,9 +121,12 @@ networks:
     driver: bridge
 ```
 
-4. **Important**: Replace `your-domain.com` with your actual domain or VPS IP
+4. **Optional**: In **Environment variables** section di Portainer, tambahkan:
+   - `APP_DOMAIN` = `your-domain.com` (atau IP VPS Anda)
 5. Click **Deploy the stack**
-6. Wait for the deployment to complete
+6. Tunggu hingga build selesai (sekitar 2-3 menit)
+
+> **💡 Tips**: Konfigurasi ini langsung menggunakan repository GitHub, jadi tidak perlu download atau clone manual!
 
 #### Step 4: Verify Installation
 1. Go to **Containers** in Portainer
