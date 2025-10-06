@@ -723,9 +723,12 @@ function logFactory(addressLogRef, portLogRef) {
 
 function websocketHandler(ws, request) {
   ws.binaryType = 'arraybuffer';
-  let addressLog = { value: '' };
-  let portLog = { value: '' };
+  let addressLog = { value: 'initializing' };
+  let portLog = { value: '0' };
   const log = logFactory(addressLog, portLog);
+  
+  console.log(`[WebSocket Handler] New connection from ${request.socket.remoteAddress}`);
+  
   const earlyDataHeader = request.headers['sec-websocket-protocol'] || '';
   const remoteSocketWrapper = { socket: null };
   let responseHeader = null;
@@ -734,7 +737,9 @@ function websocketHandler(ws, request) {
 
   const { earlyData, error: earlyDataError } = base64ToArrayBuffer(earlyDataHeader);
   if (earlyDataError) {
-    console.error('early data error', earlyDataError);
+    console.error('[WebSocket Handler] Early data error:', earlyDataError);
+  } else if (earlyData) {
+    console.log(`[WebSocket Handler] Early data received: ${earlyData.byteLength} bytes`);
   }
 
   async function processChunk(chunk) {
@@ -808,28 +813,38 @@ function websocketHandler(ws, request) {
   }
 
   ws.on('message', async (data) => {
-    if (data instanceof ArrayBuffer) {
-      await processChunk(Buffer.from(data));
-    } else if (Array.isArray(data)) {
-      await processChunk(Buffer.concat(data));
-    } else {
-      await processChunk(data);
+    try {
+      if (data instanceof ArrayBuffer) {
+        await processChunk(Buffer.from(data));
+      } else if (Array.isArray(data)) {
+        await processChunk(Buffer.concat(data));
+      } else {
+        await processChunk(data);
+      }
+    } catch (error) {
+      console.error('[WebSocket Handler] Error processing message:', error);
+      safeCloseWebSocket(ws);
     }
   });
 
   ws.on('close', () => {
+    log('WebSocket connection closed');
     remoteSocketWrapper.socket?.destroy();
     udpSocket?.close();
   });
 
   ws.on('error', (err) => {
-    console.error('WebSocket error', err);
+    console.error('[WebSocket Handler] WebSocket error:', err);
     remoteSocketWrapper.socket?.destroy();
     udpSocket?.close();
   });
 
   if (earlyData) {
-    processChunk(Buffer.from(earlyData));
+    console.log('[WebSocket Handler] Processing early data');
+    processChunk(Buffer.from(earlyData)).catch((error) => {
+      console.error('[WebSocket Handler] Error processing early data:', error);
+      safeCloseWebSocket(ws);
+    });
   }
 }
 
@@ -1035,26 +1050,34 @@ wss.on('connection', (ws, request) => {
 
 server.on('upgrade', (request, socket, head) => {
   const url = new URL(request.url, `http://${request.headers.host}`);
+  
+  console.log(`[WebSocket] Upgrade request received: ${url.pathname}`);
+  
   if (request.headers['upgrade']?.toLowerCase() !== 'websocket') {
+    console.log('[WebSocket] Invalid upgrade header, destroying socket');
     socket.destroy();
     return;
   }
 
   if (url.pathname.length === 3 || url.pathname.includes(',')) {
     const proxyKeys = url.pathname.replace('/', '').toUpperCase().split(',');
+    console.log(`[WebSocket] Using KV proxy keys: ${proxyKeys.join(', ')}`);
+    
     getKVProxyList()
       .then((kvProxy) => {
         const proxyKey = proxyKeys[Math.floor(Math.random() * proxyKeys.length)];
         const proxies = kvProxy[proxyKey];
         if (!proxies || proxies.length === 0) {
+          console.log(`[WebSocket] No proxies found for key: ${proxyKey}`);
           socket.destroy();
           return;
         }
         proxyIP = proxies[Math.floor(Math.random() * proxies.length)];
+        console.log(`[WebSocket] Selected proxy: ${proxyIP}`);
         completeUpgrade();
       })
       .catch((error) => {
-        console.error('KV proxy lookup failed', error);
+        console.error('[WebSocket] KV proxy lookup failed:', error);
         socket.destroy();
       });
     return;
@@ -1063,17 +1086,34 @@ server.on('upgrade', (request, socket, head) => {
   const proxyMatch = parseProxyPath(url.pathname);
   if (proxyMatch) {
     proxyIP = proxyMatch;
+    console.log(`[WebSocket] Using direct proxy: ${proxyIP}`);
+  } else {
+    console.log(`[WebSocket] No proxy specified, using default: ${proxyIP || 'none'}`);
   }
 
   completeUpgrade();
 
   function completeUpgrade() {
+    console.log('[WebSocket] Completing upgrade...');
     wss.handleUpgrade(request, socket, head, (ws) => {
+      console.log('[WebSocket] Connection established');
       wss.emit('connection', ws, request);
     });
   }
 });
 
-server.listen(listenPort, () => {
-  console.log(`Server listening on port ${listenPort}`);
+server.listen(listenPort, '0.0.0.0', () => {
+  console.log(`===========================================`);
+  console.log(`Server listening on 0.0.0.0:${listenPort}`);
+  console.log(`WebSocket Server: Ready`);
+  console.log(`Access at: http://localhost:${listenPort}/sub`);
+  console.log(`===========================================`);
+});
+
+server.on('error', (error) => {
+  console.error('Server error:', error);
+  if (error.code === 'EADDRINUSE') {
+    console.error(`Port ${listenPort} is already in use. Please change the PORT environment variable.`);
+  }
+  process.exit(1);
 });

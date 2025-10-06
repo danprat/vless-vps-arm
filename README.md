@@ -47,6 +47,17 @@ services:
       - PROXY_HEALTH_CHECK_API=https://id1.foolvpn.me/api/v1/check
       - CONVERTER_URL=https://api.foolvpn.me/convert
       - PROXY_PER_PAGE=24
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8787/api/v1/myip"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 networks:
   default:
     name: vless-network
@@ -57,6 +68,11 @@ networks:
 6. Akses: `http://your-vps-ip:8787/sub`
 
 **✅ Selesai! Tidak perlu download atau setup tambahan.**
+
+**📊 Monitor Status:**
+- Health check akan otomatis cek status setiap 30 detik
+- Logs dibatasi max 10MB per file untuk menghemat space
+- Auto-restart jika container crash
 
 ### Method 2: Detailed Portainer Setup (Advanced)
 
@@ -249,6 +265,89 @@ docker-compose up -d
 - UDP forwarding uses the native `dgram` module
 
 ## Troubleshooting
+
+### WebSocket Connection Issues
+
+**WebSocket tidak terhubung / Connection Refused:**
+
+1. **Check Container Logs:**
+   ```bash
+   # Via Docker CLI
+   docker logs vless-gateway
+   
+   # Via Portainer: Containers → vless-gateway → Logs
+   ```
+   
+   Cari pesan error seperti:
+   - `[WebSocket] Upgrade request received` - Berarti upgrade berhasil diterima
+   - `[WebSocket] Connection established` - Berarti koneksi berhasil
+   - `Error` atau `failed` - Ada masalah yang perlu diperbaiki
+
+2. **Pastikan Port Binding Benar:**
+   ```bash
+   # Check if port is listening
+   netstat -tlpn | grep 8787
+   
+   # Or dengan Docker
+   docker port vless-gateway
+   ```
+   
+   Harus menunjukkan: `0.0.0.0:8787 -> 8787/tcp`
+
+3. **Test WebSocket Connection:**
+   ```bash
+   # Test dengan curl
+   curl -i -N -H "Connection: Upgrade" -H "Upgrade: websocket" \
+        -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: test" \
+        http://localhost:8787/test-proxy
+   
+   # Harus return 101 Switching Protocols
+   ```
+
+4. **Check Firewall Rules:**
+   ```bash
+   # UFW (Ubuntu)
+   sudo ufw allow 8787/tcp
+   
+   # Firewalld (CentOS/RHEL)
+   sudo firewall-cmd --permanent --add-port=8787/tcp
+   sudo firewall-cmd --reload
+   ```
+
+5. **Verify WebSocket URL Format:**
+   Format yang benar untuk proxy:
+   - `ws://your-domain:8787/proxy-ip-port` (contoh: `/1.2.3.4-443`)
+   - `ws://your-domain:8787/ID,SG,US` (untuk KV proxy)
+
+**WebSocket terhubung tapi tidak ada data:**
+
+1. **Check Proxy Configuration:**
+   - Pastikan `proxyIP` variable ter-set dengan benar
+   - Cek logs untuk `[WebSocket] Using direct proxy:` atau `[WebSocket] Selected proxy:`
+
+2. **Verify Remote Proxy Accessible:**
+   ```bash
+   # Test connectivity ke proxy
+   telnet proxy-ip proxy-port
+   nc -zv proxy-ip proxy-port
+   ```
+
+3. **Check DNS Resolution:**
+   ```bash
+   # Test DNS server
+   dig @94.140.14.14 google.com
+   ```
+
+**WebSocket disconnects immediately:**
+
+1. **Check Protocol Detection:**
+   - Logs harus menunjukkan protocol type: `VLESS`, `Trojan`, atau `Shadowsocks`
+   - Jika `Unknown protocol` - client configuration mungkin salah
+
+2. **Verify Client Configuration:**
+   - UUID harus valid format
+   - Path harus sesuai dengan format: `/<proxy-ip>-<proxy-port>`
+   - Security/TLS settings harus sesuai dengan port (443=TLS, 80=NTLS)
 
 ### Portainer Issues
 
